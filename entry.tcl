@@ -42,9 +42,6 @@ proc ::tkwidgets::make_handle {my x y} {
 #------------------------------------------------------------------------------#
 # widgetbehavior procs
 
-proc ::tkwidgets::entry::getrect {} {
-}
-
 proc ::tkwidgets::entry::setrect {my x1 y1 x2 y2} {
     variable ${my}::font
     variable ${my}::framex1 $x1
@@ -55,24 +52,30 @@ proc ::tkwidgets::entry::setrect {my x1 y1 x2 y2} {
     variable ${my}::width [expr int(($x2-$x1)/[font measure $font "n"])]
 }
 
-proc ::tkwidgets::entry::displace {dx dy} {
+proc ::tkwidgets::entry::displace {my mytoplevel dx dy} {
 }
 
-proc ::tkwidgets::entry::select {state} {
+proc ::tkwidgets::entry::select {my mytoplevel state} {
+    variable ${my}::widget_id
+    if {$state} {
+        $widget_id configure -background #88f
+    } else {
+        $widget_id configure -background white
+    }
 }
 
-proc ::tkwidgets::entry::activate {state} {
+proc ::tkwidgets::entry::activate {my mytoplevel state} {
     if {$state} {
     }
 }
 
-proc ::tkwidgets::entry::delete {} {
+proc ::tkwidgets::entry::delete {my mytoplevel} {
 }
 
-proc ::tkwidgets::entry::vis {vis} {
+proc ::tkwidgets::entry::vis {my mytoplevel vis} {
 }
 
-proc ::tkwidgets::entry::click {xpix ypix shift alt dbl doit} {
+proc ::tkwidgets::entry::click {my mytoplevel xpix ypix shift alt dbl doit} {
 }
 
 proc tkwidgets::entry::save {} {
@@ -88,6 +91,8 @@ proc ::tkwidgets::entry::eraseme {my} {
 
 proc ::tkwidgets::entry::drawme {my mytoplevel} {
     variable ${my}::canvas_id
+    variable ${my}::frame_id
+    variable ${my}::widget_id
     variable ${my}::window_tag
     variable ${my}::all_tag
     variable ${my}::framex1
@@ -98,11 +103,11 @@ proc ::tkwidgets::entry::drawme {my mytoplevel} {
     variable ${my}::font
     
     set canvas_id [tkcanvas_name $mytoplevel]
-    frame $canvas_id.frame
-    entry $canvas_id.frame.entry -width $width -font $font -relief sunken
-    pack $canvas_id.frame.entry -side left -fill both -expand 1
-    pack $canvas_id.frame -side bottom -fill both -expand 1
-    $canvas_id create window $framex1 $framey1 -anchor nw -window $canvas_id.frame    \
+    frame $frame_id
+    entry $widget_id -width $width -font $font -relief sunken
+    pack $widget_id -side left -fill both -expand 1
+    pack $frame_id -side bottom -fill both -expand 1
+    $canvas_id create window $framex1 $framey1 -anchor nw -window $frame_id \
         -width [expr $framex2-$framex1] -height [expr $framey2-$framey1] \
         -tags [list $window_tag $all_tag]
 }
@@ -129,8 +134,8 @@ proc ::tkwidgets::entry::new {my tkcanvas} {
     }
     set ${my}::canvas_id $tkcanvas
     set ${my}::receive_name "#$my"
-    set ${my}::frame_id $tkcanvas.$my.frame
-    set ${my}::widget_id ${my}::frame_id.widget
+    set ${my}::frame_id $tkcanvas.$my-f
+    set ${my}::widget_id $tkcanvas.$my-f.w 
     set ${my}::handle_id "handle"
     set ${my}::window_tag "entrywindow$my"
     set ${my}::all_tag "entry$my"
@@ -157,9 +162,8 @@ proc tkwidgets::entry::setup {} {
         wm geometry . 400x400+500+40
         canvas .c
         pack .c -side left -expand 1 -fill both
-        set mynamespace entry123456
-        set my ::tkwidgets::entry::$mynamespace
-        ::tkwidgets::entry::new $mynamespace .c
+        set my 123456
+        ::tkwidgets::entry::new $my .c
         ::tkwidgets::entry::setrect $my 30 30 330 90
         ::tkwidgets::entry::drawme $my ""
     }

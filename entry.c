@@ -48,26 +48,35 @@ static void entry_getrect(t_gobj *z, t_glist *glist,
                           int *xp1, int *yp1, int *xp2, int *yp2)
 {
     t_entry *x = (t_entry *)z;
+
+    *xp1 = text_xpix(&x->x_obj, glist);
+    *yp1 = text_ypix(&x->x_obj, glist);
+    *xp2 = text_xpix(&x->x_obj, glist) + x->width;
+    *yp2 = text_ypix(&x->x_obj, glist) + x->height;
 }
 
 static void entry_displace(t_gobj *z, t_glist *glist, int dx, int dy)
 {
     t_entry *x = (t_entry *)z;
+    sys_vgui("::tkwidgets::entry::displace %lx .x%lx %d %d\n", x, glist, dx, dy);
 }
 
 static void entry_select(t_gobj *z, t_glist *glist, int state)
 {
     t_entry *x = (t_entry *)z;
+    sys_vgui("::tkwidgets::entry::select %lx .x%lx %d\n", x, glist, state);
 }
 
 static void entry_activate(t_gobj *z, t_glist *glist)
 {
     t_entry *x = (t_entry *)z;
+    sys_vgui("::tkwidgets::entry::activate %lx .x%lx\n", x, glist);
 }
 
 static void entry_delete(t_gobj *z, t_glist *glist)
 {
     t_entry *x = (t_entry *)z;
+    sys_vgui("::tkwidgets::entry::delete %lx .x%lx\n", x, glist);
 }
 
 static void entry_vis(t_gobj *z, t_glist *glist, int vis)
@@ -82,6 +91,7 @@ static void entry_vis(t_gobj *z, t_glist *glist, int vis)
 static void entry_click(t_gobj *z, t_glist *glist)
 {
     t_entry *x = (t_entry *)z;
+    sys_vgui("::tkwidgets::entry::click %lx .x%lx\n", x, glist);
 }
 
 /* ------------------------------------------------------------------------ */
