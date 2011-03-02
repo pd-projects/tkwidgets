@@ -34,6 +34,10 @@ typedef struct _entry
 
 static void drawme(t_entry *x, t_glist *glist)
 {
+    sys_vgui("::tkwidgets::entry::setrect %lx %d %d %d %d\n", x,          
+             text_xpix(&x->x_obj, glist), text_ypix(&x->x_obj, glist),
+             text_xpix(&x->x_obj, glist) + x->width, 
+             text_ypix(&x->x_obj, glist) + x->height);
     sys_vgui("::tkwidgets::entry::drawme %lx .x%lx\n", x, glist);
 }
 
@@ -57,26 +61,22 @@ static void entry_getrect(t_gobj *z, t_glist *glist,
 
 static void entry_displace(t_gobj *z, t_glist *glist, int dx, int dy)
 {
-    t_entry *x = (t_entry *)z;
-    sys_vgui("::tkwidgets::entry::displace %lx .x%lx %d %d\n", x, glist, dx, dy);
+    sys_vgui("::tkwidgets::entry::displace %lx .x%lx %d %d\n", z, glist, dx, dy);
 }
 
 static void entry_select(t_gobj *z, t_glist *glist, int state)
 {
-    t_entry *x = (t_entry *)z;
-    sys_vgui("::tkwidgets::entry::select %lx .x%lx %d\n", x, glist, state);
+    sys_vgui("::tkwidgets::entry::select %lx .x%lx %d\n", z, glist, state);
 }
 
 static void entry_activate(t_gobj *z, t_glist *glist)
 {
-    t_entry *x = (t_entry *)z;
-    sys_vgui("::tkwidgets::entry::activate %lx .x%lx\n", x, glist);
+    sys_vgui("::tkwidgets::entry::activate %lx .x%lx\n", z, glist);
 }
 
 static void entry_delete(t_gobj *z, t_glist *glist)
 {
-    t_entry *x = (t_entry *)z;
-    sys_vgui("::tkwidgets::entry::delete %lx .x%lx\n", x, glist);
+    sys_vgui("::tkwidgets::entry::delete %lx .x%lx\n", z, glist);
 }
 
 static void entry_vis(t_gobj *z, t_glist *glist, int vis)
@@ -90,8 +90,7 @@ static void entry_vis(t_gobj *z, t_glist *glist, int vis)
 
 static void entry_click(t_gobj *z, t_glist *glist)
 {
-    t_entry *x = (t_entry *)z;
-    sys_vgui("::tkwidgets::entry::click %lx .x%lx\n", x, glist);
+    sys_vgui("::tkwidgets::entry::click %lx .x%lx\n", z, glist);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -123,14 +122,7 @@ static void* entry_new(t_symbol* s, int argc, t_atom *argv)
     x->x_data_outlet = outlet_new(&x->x_obj, &s_float);
     x->x_status_outlet = outlet_new(&x->x_obj, &s_anything);
 
-//    char buf[MAXPDSTRING];
-//    snprintf(buf, MAXPDSTRING, "::tkwidgets::entry::%lx", x);
-//    x->my = gensym(buf);
     sys_vgui("::tkwidgets::entry::new %lx .x%lx\n", x, glist);
-    sys_vgui("::tkwidgets::entry::setrect %lx %d %d %d %d\n", x,              
-             text_xpix(&x->x_obj, glist), text_ypix(&x->x_obj, glist),
-             text_xpix(&x->x_obj, glist) + x->width, 
-             text_ypix(&x->x_obj, glist) + x->height);
 
     return (x);
 }

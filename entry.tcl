@@ -53,6 +53,9 @@ proc ::tkwidgets::entry::setrect {my x1 y1 x2 y2} {
 }
 
 proc ::tkwidgets::entry::displace {my mytoplevel dx dy} {
+    variable ${my}::all_tag
+    set tkcanvas [tkcanvas_name $mytoplevel]
+    $tkcanvas move $all_tag $dx $dy
 }
 
 proc ::tkwidgets::entry::select {my mytoplevel state} {
