@@ -86,7 +86,7 @@ proc ::tkwidgets::entry::eraseme {my} {
     ${my}::canvas_id delete $all_tag
 }
 
-proc ::tkwidgets::entry::drawme {my tkcanvas} {
+proc ::tkwidgets::entry::drawme {my mytoplevel} {
     variable ${my}::canvas_id
     variable ${my}::window_tag
     variable ${my}::all_tag
@@ -97,7 +97,7 @@ proc ::tkwidgets::entry::drawme {my tkcanvas} {
     variable ${my}::width
     variable ${my}::font
     
-    set canvas_id $tkcanvas
+    set canvas_id [tkcanvas_name $mytoplevel]
     frame $canvas_id.frame
     entry $canvas_id.frame.entry -width $width -font $font -relief sunken
     pack $canvas_id.frame.entry -side left -fill both -expand 1
@@ -108,9 +108,8 @@ proc ::tkwidgets::entry::drawme {my tkcanvas} {
 }
 
 # sets up an instance of the class
-proc ::tkwidgets::entry::new {tkcanvas instance} {
+proc ::tkwidgets::entry::new {my tkcanvas} {
     # build object instance using namespace hack
-    set my ::tkwidgets::entry::$instance
     namespace eval $my {
         # declare all per-instance variables
         variable receive_name
@@ -129,12 +128,12 @@ proc ::tkwidgets::entry::new {tkcanvas instance} {
         variable font
     }
     set ${my}::canvas_id $tkcanvas
-    set ${my}::receive_name "#$instance"
-    set ${my}::frame_id $tkcanvas.$instance.frame
+    set ${my}::receive_name "#$my"
+    set ${my}::frame_id $tkcanvas.$my.frame
     set ${my}::widget_id ${my}::frame_id.widget
     set ${my}::handle_id "handle"
-    set ${my}::window_tag "entrywindow$instance"
-    set ${my}::all_tag "entry$instance"
+    set ${my}::window_tag "entrywindow$my"
+    set ${my}::all_tag "entry$my"
     set ${my}::font [font create -family Helvetica -size 24]
 }
 
@@ -160,9 +159,9 @@ proc tkwidgets::entry::setup {} {
         pack .c -side left -expand 1 -fill both
         set mynamespace entry123456
         set my ::tkwidgets::entry::$mynamespace
-        ::tkwidgets::entry::new .c $mynamespace
+        ::tkwidgets::entry::new $mynamespace .c
         ::tkwidgets::entry::setrect $my 30 30 330 90
-        ::tkwidgets::entry::drawme $my .c
+        ::tkwidgets::entry::drawme $my ""
     }
 }
 
