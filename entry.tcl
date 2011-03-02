@@ -142,16 +142,18 @@ proc ::tkwidgets::entry::new {tkcanvas instance} {
 proc tkwidgets::entry::setup {} {
     #bind PatchWindow <<EditMode>> {+tkwidgets::entry::set_for_editmode %W}    
     # check if we are Pd < 0.43, which has no 'pdsend', but a 'pd' coded in C
-    if {[llength [info procs "pdsend"]] == 0} {
-        proc pdsend {args} {pd "[join $args { }] ;"}
+    if {[llength [info procs "::pdsend"]] == 0} {
+        proc ::pdsend {args} {pd "[join $args { }] ;"}
     }
 
     # if not loading within Pd, then create a window and canvas to work with
-    if {[llength [info procs "pdtk_post"]] == 0} {
+    if {[llength [info procs "::pdtk_post"]] == 0} {
+        catch {console show}
         puts stderr "setting up as standalone dev mode!"
         # this stuff creates a dev skeleton
-        proc pdtk_post {args} {puts stderr "pdtk_post $args"}
-        proc pdsend {args} {puts stderr "pdsend $args"}
+        proc ::pdtk_post {args} {puts stderr "pdtk_post $args"}
+        proc ::pdsend {args} {puts stderr "pdsend $args"}
+        proc ::tkcanvas_name {mytoplevel} {return "$mytoplevel.c"}
         tk scaling 1
         wm geometry . 400x400+500+40
         canvas .c
@@ -165,4 +167,3 @@ proc tkwidgets::entry::setup {} {
 }
 
 tkwidgets::entry::setup
-catch {console show}
