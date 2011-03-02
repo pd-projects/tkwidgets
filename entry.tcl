@@ -4,39 +4,88 @@
 
 package require Tk
 
+#------------------------------------------------------------------------------#
+# tk widgets general purpose procs
+
+namespace eval ::tkwidgets:: {
+    variable handle_id ""
+    variable handle_tag "tkwidgets-RESIZE"
+}
+
+proc ::tkwidgets::resize_click {my receive_name state} {
+    variable handle_id
+    if {$state} {
+        bind $handle_id <Motion>  "::tkwidgets::resize_motion $my $receive_name %x %y"
+    } else {
+        bind $handle_id <Motion>  {}
+    }
+    pdsend "$receive_name resize_click $state"
+}
+
+proc ::tkwidgets::resize_motion {my receive_name x y} {
+    pdsend "$receive_name resize_motion $x $y"
+}
+
+proc ::tkwidgets::make_resize_handle {my x y} {
+    variable handle_id
+    variable handle_tag
+    variable ${my}::canvas_id
+    variable ${my}::receive_name
+    variable ${my}::all_tag
+    set size 15
+    set handle_id $canvas_id.handle
+    $canvas_id delete $handle_tag
+    destroy $handle_id
+    canvas $handle_id -width $size -height $size -bg #ddd -bd 0 \
+        -highlightthickness 3 -highlightcolor #f00 -cursor bottom_right_corner
+    $canvas_id create window [expr $x - $size] [expr $y - $size] -anchor nw \
+        -width $size -height $size -window $handle_id -tags [list $handle_tag $all_tag]
+    raise $handle_id
+    bind $handle_id <ButtonPress>   "::tkwidgets::resize_click $my $receive_name 1"
+    bind $handle_id <ButtonRelease> "::tkwidgets::resize_click $my $receive_name 0"
+    puts stderr "::tkwidgets::make_resize_handle $my $x $y $size $receive_name"
+}
+
+#------------------------------------------------------------------------------#
+
 namespace eval ::tkwidgets::entry:: {
     # global variables for all instances
 }
 
 #------------------------------------------------------------------------------#
-# tk widgets general purpose procs
+# support procs
 
-namespace eval ::tkwidgets:: {
+proc ::tkwidgets::entry::save {my} {
 }
 
-proc ::tkwidgets::resize_click {receive_name state} {
-    pdsend "$receive_name resize_click $state"
+proc ::tkwidgets::entry::eraseme {my} {
+    variable ${my}::canvas_id 
+    variable ${my}::all_tag
+    $canvas_id delete $all_tag
 }
 
-proc ::tkwidgets::resize_motion {receive_name state} {
-    pdsend "$receive_name resize_motion $"
-}
-
-proc ::tkwidgets::make_handle {my x y} {
-    variable ${my}::receive_name
+proc ::tkwidgets::entry::drawme {my mytoplevel} {
     variable ${my}::canvas_id
-    variable ${my}::handle_id
+    variable ${my}::frame_id
+    variable ${my}::widget_id
+    variable ${my}::window_tag
+    variable ${my}::all_tag
+    variable ${my}::framex1
+    variable ${my}::framey1
     variable ${my}::framex2
     variable ${my}::framey2
-    set size 10
-    canvas $handle_id -width $size -height $size -bg #ddd -bd 0 \
-        -highlightthickness 3 -highlightcolor #f00 -cursor bottom_right_corner
-    $canvas_id create window [expr $framex2 - $size] [expr $framey2 - $size] -anchor nw \
-        -width $size -height $size -window $handle_id -tags RESIZE
-    raise $handle_id
-    bind $handle_id <ButtonPress>   "::tkwidgets::resize_click $receive_name 1"
-    bind $handle_id <ButtonRelease> "::tkwidgets::resize_click $receive_name 0"
-    bind $handle_id <Motion>        "::tkwidgets::resize_motion $receive_name %x %y"
+    variable ${my}::width
+    variable ${my}::font
+    
+    set canvas_id [tkcanvas_name $mytoplevel]
+    frame $frame_id
+    entry $widget_id -width $width -font $font -relief sunken
+    pack $widget_id -side left -fill both -expand 1
+    pack $frame_id -side bottom -fill both -expand 1
+    $canvas_id create window $framex1 $framey1 -anchor nw -window $frame_id \
+        -width [expr $framex2-$framex1] -height [expr $framey2-$framey1] \
+        -tags [list $window_tag $all_tag]
+    ::tkwidgets::make_resize_handle $my $framex2 $framey2
 }
 
 #------------------------------------------------------------------------------#
@@ -69,6 +118,7 @@ proc ::tkwidgets::entry::select {my mytoplevel state} {
 
 proc ::tkwidgets::entry::activate {my mytoplevel state} {
     if {$state} {
+    } else {
     }
 }
 
@@ -76,44 +126,17 @@ proc ::tkwidgets::entry::delete {my mytoplevel} {
 }
 
 proc ::tkwidgets::entry::vis {my mytoplevel vis} {
+    if {$vis} {
+        drawme $my $mytoplevel
+    } else {
+        eraseme $my
+    }
 }
 
 proc ::tkwidgets::entry::click {my mytoplevel xpix ypix shift alt dbl doit} {
 }
 
-proc tkwidgets::entry::save {} {
-}
-
-
 #------------------------------------------------------------------------------#
-
-proc ::tkwidgets::entry::eraseme {my} {
-    variable ${my}::all_tag
-    ${my}::canvas_id delete $all_tag
-}
-
-proc ::tkwidgets::entry::drawme {my mytoplevel} {
-    variable ${my}::canvas_id
-    variable ${my}::frame_id
-    variable ${my}::widget_id
-    variable ${my}::window_tag
-    variable ${my}::all_tag
-    variable ${my}::framex1
-    variable ${my}::framey1
-    variable ${my}::framex2
-    variable ${my}::framey2
-    variable ${my}::width
-    variable ${my}::font
-    
-    set canvas_id [tkcanvas_name $mytoplevel]
-    frame $frame_id
-    entry $widget_id -width $width -font $font -relief sunken
-    pack $widget_id -side left -fill both -expand 1
-    pack $frame_id -side bottom -fill both -expand 1
-    $canvas_id create window $framex1 $framey1 -anchor nw -window $frame_id \
-        -width [expr $framex2-$framex1] -height [expr $framey2-$framey1] \
-        -tags [list $window_tag $all_tag]
-}
 
 # sets up an instance of the class
 proc ::tkwidgets::entry::new {my tkcanvas} {
@@ -134,6 +157,8 @@ proc ::tkwidgets::entry::new {my tkcanvas} {
         variable framey2
         variable width
         variable font
+
+        variable cursor
     }
     set ${my}::canvas_id $tkcanvas
     set ${my}::receive_name "#$my"
@@ -143,11 +168,12 @@ proc ::tkwidgets::entry::new {my tkcanvas} {
     set ${my}::window_tag "entrywindow$my"
     set ${my}::all_tag "entry$my"
     set ${my}::font [font create -family Helvetica -size 24]
+    set ${my}::cursor "xterm"
+    #bind PatchWindow <<EditMode>> {+tkwidgets::entry::set_for_editmode %W}    
 }
 
 # sets up the class
 proc tkwidgets::entry::setup {} {
-    #bind PatchWindow <<EditMode>> {+tkwidgets::entry::set_for_editmode %W}    
     # check if we are Pd < 0.43, which has no 'pdsend', but a 'pd' coded in C
     if {[llength [info procs "::pdsend"]] == 0} {
         proc ::pdsend {args} {pd "[join $args { }] ;"}
@@ -165,10 +191,10 @@ proc tkwidgets::entry::setup {} {
         wm geometry . 400x400+500+40
         canvas .c
         pack .c -side left -expand 1 -fill both
-        set my 123456
+        set my ::123456
         ::tkwidgets::entry::new $my .c
         ::tkwidgets::entry::setrect $my 30 30 330 90
-        ::tkwidgets::entry::drawme $my ""
+        ::tkwidgets::entry::vis $my "" 1
     }
 }
 

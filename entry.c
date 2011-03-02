@@ -32,20 +32,6 @@ typedef struct _entry
 /* ------------------------------------------------------------------------ */
 /* support functions */
 
-static void drawme(t_entry *x, t_glist *glist)
-{
-    sys_vgui("::tkwidgets::entry::setrect %lx %d %d %d %d\n", x,          
-             text_xpix(&x->x_obj, glist), text_ypix(&x->x_obj, glist),
-             text_xpix(&x->x_obj, glist) + x->width, 
-             text_ypix(&x->x_obj, glist) + x->height);
-    sys_vgui("::tkwidgets::entry::drawme %lx .x%lx\n", x, glist);
-}
-
-static void eraseme(t_entry* x)
-{
-    sys_vgui("::tkwidgets::entry::eraseme %lx\n", x);
-}
-
 /* ------------------------------------------------------------------------ */
 /* t_widgetbehavior functions */
 static void entry_getrect(t_gobj *z, t_glist *glist,
@@ -61,36 +47,44 @@ static void entry_getrect(t_gobj *z, t_glist *glist,
 
 static void entry_displace(t_gobj *z, t_glist *glist, int dx, int dy)
 {
-    sys_vgui("::tkwidgets::entry::displace %lx .x%lx %d %d\n", z, glist, dx, dy);
+    sys_vgui("::tkwidgets::entry::displace ::%lx .x%lx %d %d\n", z, glist, dx, dy);
 }
 
 static void entry_select(t_gobj *z, t_glist *glist, int state)
 {
-    sys_vgui("::tkwidgets::entry::select %lx .x%lx %d\n", z, glist, state);
+    sys_vgui("::tkwidgets::entry::select ::%lx .x%lx %d\n", z, glist, state);
 }
 
 static void entry_activate(t_gobj *z, t_glist *glist)
 {
-    sys_vgui("::tkwidgets::entry::activate %lx .x%lx\n", z, glist);
+    sys_vgui("::tkwidgets::entry::activate ::%lx .x%lx\n", z, glist);
 }
 
 static void entry_delete(t_gobj *z, t_glist *glist)
 {
-    sys_vgui("::tkwidgets::entry::delete %lx .x%lx\n", z, glist);
+    sys_vgui("::tkwidgets::entry::delete ::%lx .x%lx\n", z, glist);
 }
 
 static void entry_vis(t_gobj *z, t_glist *glist, int vis)
 {
     t_entry *x = (t_entry *)z;
     if (vis)
-        drawme(x, glist);
-    else
-        eraseme(x);
+    {
+        sys_vgui("::tkwidgets::entry::setrect ::%lx %d %d %d %d\n", 
+                 x,
+                 text_xpix(&x->x_obj, glist),
+                 text_ypix(&x->x_obj, glist),
+                 text_xpix(&x->x_obj, glist) + x->width, 
+                 text_ypix(&x->x_obj, glist) + x->height);
+    }
+    sys_vgui("::tkwidgets::entry::vis ::%lx .x%lx %d\n", x, glist, vis);
 }
 
-static void entry_click(t_gobj *z, t_glist *glist)
+static int entry_click(t_gobj *z, t_glist *glist,
+    int xpix, int ypix, int shift, int alt, int dbl, int doit)
 {
-    sys_vgui("::tkwidgets::entry::click %lx .x%lx\n", z, glist);
+    sys_vgui("::tkwidgets::entry::click ::%lx .x%lx %d %d %d %d %d %d\n", 
+             z, glist, xpix, ypix, shift, alt, dbl, doit);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -98,6 +92,7 @@ static void entry_click(t_gobj *z, t_glist *glist)
 
 static void entry_save(t_gobj *z, t_binbuf *b)
 {
+    sys_vgui("::tkwidgets::entry::save ::%lx\n", z);
 }
 
 static void* entry_new(t_symbol* s, int argc, t_atom *argv)
@@ -113,8 +108,12 @@ static void* entry_new(t_symbol* s, int argc, t_atom *argv)
     if(argc > 1) x->height = atom_getint(argv + 1);
     if(argc > 2) binbuf_add(x->options_binbuf, argc - 2, argv + 2);
 
+// TODO
 //    x->receive_name = tkwidgets_gen_callback_name(x->tcl_namespace);
-//    pd_bind(&x->x_obj.ob_pd, x->receive_name);
+    char* buf[MAXPDSTRING];
+    snprintf(buf, MAXPDSTRING, "#%lx", x);
+    x->receive_name = gensym(buf);
+    pd_bind(&x->x_obj.ob_pd, x->receive_name);
 
     t_glist* glist = canvas_getcurrent();
     x->x_glist = glist;
@@ -122,7 +121,7 @@ static void* entry_new(t_symbol* s, int argc, t_atom *argv)
     x->x_data_outlet = outlet_new(&x->x_obj, &s_float);
     x->x_status_outlet = outlet_new(&x->x_obj, &s_anything);
 
-    sys_vgui("::tkwidgets::entry::new %lx .x%lx\n", x, glist);
+    sys_vgui("::tkwidgets::entry::new ::%lx .x%lx\n", x, glist);
 
     return (x);
 }
@@ -143,10 +142,10 @@ void entry_setup(void)
     entry_widgetbehavior.w_getrectfn  = entry_getrect;
     entry_widgetbehavior.w_displacefn = entry_displace;
     entry_widgetbehavior.w_selectfn   = entry_select;
-    entry_widgetbehavior.w_activatefn = NULL;
+    entry_widgetbehavior.w_activatefn = entry_activate;
     entry_widgetbehavior.w_deletefn   = entry_delete;
     entry_widgetbehavior.w_visfn      = entry_vis;
-    entry_widgetbehavior.w_clickfn    = NULL;
+    entry_widgetbehavior.w_clickfn    = entry_click;
     class_setwidget(entry_class, &entry_widgetbehavior);
     class_setsavefn(entry_class, &entry_save);
 
