@@ -47,7 +47,14 @@ static void entry_getrect(t_gobj *z, t_glist *glist,
 
 static void entry_displace(t_gobj *z, t_glist *glist, int dx, int dy)
 {
-    sys_vgui("::tkwidgets::entry::displace ::%lx .x%lx %d %d\n", z, glist, dx, dy);
+    t_entry *x = (t_entry *)z;
+    x->x_obj.te_xpix += dx;
+    x->x_obj.te_ypix += dy;
+    if (glist_isvisible(glist))
+    {
+        sys_vgui("::tkwidgets::entry::displace ::%lx .x%lx %d %d\n", z, glist, dx, dy);
+        canvas_fixlinesfor(glist_getcanvas(glist), (t_entry*) x);
+    }
 }
 
 static void entry_select(t_gobj *z, t_glist *glist, int state)
@@ -55,9 +62,9 @@ static void entry_select(t_gobj *z, t_glist *glist, int state)
     sys_vgui("::tkwidgets::entry::select ::%lx .x%lx %d\n", z, glist, state);
 }
 
-static void entry_activate(t_gobj *z, t_glist *glist)
+static void entry_activate(t_gobj *z, t_glist *glist, int state)
 {
-    sys_vgui("::tkwidgets::entry::activate ::%lx .x%lx\n", z, glist);
+    sys_vgui("::tkwidgets::entry::activate ::%lx .x%lx %d\n", z, glist, state);
 }
 
 static void entry_delete(t_gobj *z, t_glist *glist)
@@ -85,6 +92,8 @@ static int entry_click(t_gobj *z, t_glist *glist,
 {
     sys_vgui("::tkwidgets::entry::click ::%lx .x%lx %d %d %d %d %d %d\n", 
              z, glist, xpix, ypix, shift, alt, dbl, doit);
+    // TODO this should return based on whether the widget received the click
+    return 0;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -121,7 +130,8 @@ static void* entry_new(t_symbol* s, int argc, t_atom *argv)
     x->x_data_outlet = outlet_new(&x->x_obj, &s_float);
     x->x_status_outlet = outlet_new(&x->x_obj, &s_anything);
 
-    sys_vgui("::tkwidgets::entry::new ::%lx .x%lx\n", x, glist);
+    /* send the instance ID without the "::" so we can build widget names */
+    sys_vgui("::tkwidgets::entry::new %lx .x%lx\n", x, glist);
 
     return (x);
 }

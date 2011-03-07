@@ -9,6 +9,7 @@ package require Tk
 #------------------------------------------------------------------------------#
 # tk widgets general purpose procs
 
+set ::select_fill "#bdbddd"
 
 namespace eval ::tkwidgets:: {
     variable handle_tag "tkwidgets-RESIZE"
@@ -26,6 +27,38 @@ proc ::tkwidgets::set_up_variables {instance tkcanvas} {
     variable ${my}::all_tag "entry$instance"
     variable ${my}::font [font create -family Helvetica -size 24]
 }
+
+proc ::tkwidgets::bind_mouse_events {my} {
+    variable ${my}::canvas_id
+    variable ${my}::widget_id
+    bind $widget_id <ButtonPress> "pdtk_canvas_mouse $canvas_id \
+                                       \[expr %X - \[winfo rootx $canvas_id]] \
+                                       \[expr %Y - \[winfo rooty $canvas_id]] %b 0"
+    bind $widget_id <ButtonRelease> "pdtk_canvas_mouseup $canvas_id \
+                                         \[expr %X - \[winfo rootx $canvas_id]] \
+                                         \[expr %Y - \[winfo rooty $canvas_id]] %b"
+    bind $widget_id <Shift-Button> "pdtk_canvas_mouse $canvas_id \
+                                        \[expr %X - \[winfo rootx $canvas_id]] \
+                                        \[expr %Y - \[winfo rooty $canvas_id]] %b 1"
+    bind $widget_id <Button-2> "pdtk_canvas_rightclick $canvas_id \
+                                    \[expr %X - \[winfo rootx $canvas_id]] \
+                                    \[expr %Y - \[winfo rooty $canvas_id]] %b"
+    bind $widget_id <Button-3> "pdtk_canvas_rightclick $canvas_id \
+                                    \[expr %X - \[winfo rootx $canvas_id]] \
+                                    \[expr %Y - \[winfo rooty $canvas_id]] %b"
+    bind $widget_id <Control-Button> "pdtk_canvas_rightclick $canvas_id \
+                                          \[expr %X - \[winfo rootx $canvas_id]] \
+                                          \[expr %Y - \[winfo rooty $canvas_id]] %b"
+    # mouse motion
+    bind $widget_id <Motion> "pdtk_canvas_motion $canvas_id \
+                                  \[expr %X - \[winfo rootx $canvas_id]] \
+                                  \[expr %Y - \[winfo rooty $canvas_id]] 0"
+}
+
+proc ::tkwidgets::erase_iolets {my} {
+    variable ${my}::canvas_id
+    variable ${my}::iolets_tag
+    $canvas_id delete $iolets_tag
 }
 
 proc ::tkwidgets::resize_click {my receive_name state} {
@@ -56,7 +89,7 @@ proc ::tkwidgets::make_resize_handle {my x y} {
         -highlightthickness 3 -highlightcolor #f00 -cursor bottom_right_corner
     $canvas_id create window [expr $x - $size] [expr $y - $size] -anchor nw \
         -width $size -height $size -window $handle_id -tags [list $handle_tag $all_tag]
-    raise $handle_id
+    $canvas_id raise $handle_id
     bind $handle_id <ButtonPress>   "::tkwidgets::resize_click $my $receive_name 1"
     bind $handle_id <ButtonRelease> "::tkwidgets::resize_click $my $receive_name 0"
     puts stderr "::tkwidgets::make_resize_handle $my $x $y $size $receive_name"
@@ -101,7 +134,7 @@ proc ::tkwidgets::entry::drawme {my mytoplevel} {
     $canvas_id create window $framex1 $framey1 -anchor nw -window $frame_id \
         -width [expr $framex2-$framex1] -height [expr $framey2-$framey1] \
         -tags [list $window_tag $all_tag]
-    ::tkwidgets::make_resize_handle $my $framex2 $framey2
+    ::tkwidgets::bind_mouse_events $my
 }
 
 #------------------------------------------------------------------------------#
@@ -125,16 +158,24 @@ proc ::tkwidgets::entry::displace {my mytoplevel dx dy} {
 
 proc ::tkwidgets::entry::select {my mytoplevel state} {
     variable ${my}::widget_id
+    variable ${my}::background
+    
     if {$state} {
-        $widget_id configure -background #88f
+        set $background [$widget_id cget -background]
+        $widget_id configure -background $::select_fill -state disabled \
+            -cursor $::cursor_editmode_nothing
     } else {
-        $widget_id configure -background white
+        $widget_id configure -background $background -state normal -cursor xterm
+        # activatefn never gets called with 0, so destroy handle here
+        destroy ${my}::handle_id
     }
 }
 
 proc ::tkwidgets::entry::activate {my mytoplevel state} {
     if {$state} {
-    } else {
+        variable ${my}::framex2
+        variable ${my}::framey2
+        ::tkwidgets::make_resize_handle $my $framex2 $framey2
     }
 }
 
@@ -155,8 +196,9 @@ proc ::tkwidgets::entry::click {my mytoplevel xpix ypix shift alt dbl doit} {
 #------------------------------------------------------------------------------#
 
 # sets up an instance of the class
-proc ::tkwidgets::entry::new {my tkcanvas} {
+proc ::tkwidgets::entry::new {instance tkcanvas} {
     # build object instance using namespace hack
+    set my ::$instance
     namespace eval $my {
         # declare all per-instance variables
         variable receive_name
@@ -165,6 +207,7 @@ proc ::tkwidgets::entry::new {my tkcanvas} {
         variable widget_id
         variable handle_id
         variable window_tag
+        variable iolets_tag
         variable all_tag
 
         variable framex1
@@ -175,9 +218,11 @@ proc ::tkwidgets::entry::new {my tkcanvas} {
         variable font
 
         variable cursor
+        variable background
     }
     ::tkwidgets::set_up_variables $instance $tkcanvas
     set ${my}::cursor "xterm"
+    set ${my}::background "white"
     #bind PatchWindow <<EditMode>> {+tkwidgets::entry::set_for_editmode %W}    
 }
 
@@ -188,7 +233,8 @@ proc tkwidgets::entry::setup {} {
         proc ::pdsend {args} {pd "[join $args { }] ;"}
     }
 
-    # if not loading within Pd, then create a window and canvas to work with
+    # if loading in standalone mode without Pd, then create a window
+    # and canvas to work with.
     if {[llength [info procs "::pdtk_post"]] == 0} {
         catch {console show}
         puts stderr "setting up as standalone dev mode!"
