@@ -4,12 +4,28 @@
 
 package require Tk
 
+# TODO should handle_id be tkwidgets-wide or per instance?
+
 #------------------------------------------------------------------------------#
 # tk widgets general purpose procs
 
+
 namespace eval ::tkwidgets:: {
-    variable handle_id ""
     variable handle_tag "tkwidgets-RESIZE"
+    variable handle_id ".$handle_tag"
+}
+
+proc ::tkwidgets::set_up_variables {instance tkcanvas} {
+    set my ::$instance
+    variable ${my}::canvas_id "$tkcanvas"
+    variable ${my}::receive_name "#$instance"
+    variable ${my}::frame_id "$tkcanvas.$instance-f"
+    variable ${my}::widget_id "$frame_id.w"
+    variable ${my}::handle_id "RESIZE"
+    variable ${my}::window_tag "entrywindow$instance"
+    variable ${my}::all_tag "entry$instance"
+    variable ${my}::font [font create -family Helvetica -size 24]
+}
 }
 
 proc ::tkwidgets::resize_click {my receive_name state} {
@@ -160,14 +176,7 @@ proc ::tkwidgets::entry::new {my tkcanvas} {
 
         variable cursor
     }
-    set ${my}::canvas_id $tkcanvas
-    set ${my}::receive_name "#$my"
-    set ${my}::frame_id $tkcanvas.$my-f
-    set ${my}::widget_id $tkcanvas.$my-f.w 
-    set ${my}::handle_id "handle"
-    set ${my}::window_tag "entrywindow$my"
-    set ${my}::all_tag "entry$my"
-    set ${my}::font [font create -family Helvetica -size 24]
+    ::tkwidgets::set_up_variables $instance $tkcanvas
     set ${my}::cursor "xterm"
     #bind PatchWindow <<EditMode>> {+tkwidgets::entry::set_for_editmode %W}    
 }
