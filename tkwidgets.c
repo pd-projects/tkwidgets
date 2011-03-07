@@ -36,7 +36,7 @@ void tkwidgets_query_options(t_symbol *receive_name, t_symbol *widget_id,
 {
     int i;
     for(i = 0; i < argc; i++)
-        sys_vgui("pd [concat %s query_callback %s [%s cget -%s] \\;]\n",
+        sys_vgui("pdsend \"%s query_callback %s [%s cget -%s]\"\n",
                  receive_name->s_name, argv[i], widget_id->s_name, argv[i]);
 }
 
@@ -56,7 +56,7 @@ void tkwidgets_store_options(t_symbol *receive_name, t_symbol *tcl_namespace,
                  tcl_namespace->s_name, argv[i], 
                  tcl_namespace->s_name, tcl_namespace->s_name);
     }
-    sys_vgui("pd [concat %s store_callback $::%s::list \\;]\n",
+    sys_vgui("pdsend \"%s store_callback $::%s::list\"\n",
              receive_name->s_name, tcl_namespace->s_name);
     sys_vgui("unset ::%s::list \n", tcl_namespace->s_name);  
 }
@@ -228,14 +228,14 @@ void tkwidgets_erase_y_scrollbar(t_symbol *widget_id, t_symbol *scrollbar_id)
 void tkwidgets_bind_key_events(t_symbol *canvas_id, t_symbol *widget_id)
 {
 #ifdef __APPLE__
-    sys_vgui("bind %s <Mod1-Key> {pdtk_canvas_ctrlkey %s %%K 0}\n",
+    sys_vgui("bind %s <Mod1-Key> {::pd_bindings::sendkey %s %%K 0}\n",
              widget_id->s_name, canvas_id->s_name);
-    sys_vgui("bind %s <Mod1-Shift-Key> {pdtk_canvas_ctrlkey %s %%K 1}\n",
+    sys_vgui("bind %s <Mod1-Shift-Key> {::pd_bindings::sendkey %s %%K 1}\n",
              widget_id->s_name, canvas_id->s_name);
 #else
-    sys_vgui("bind %s <Control-Key> {pdtk_canvas_ctrlkey %s %%K 0}\n",
+    sys_vgui("bind %s <Control-Key> {::pd_bindings::sendkey %s %%K 0}\n",
              widget_id->s_name, canvas_id->s_name);
-    sys_vgui("bind %s <Control-Shift-Key> {pdtk_canvas_ctrlkey %s %%K 1}\n",
+    sys_vgui("bind %s <Control-Shift-Key> {::pd_bindings::sendkey %s %%K 1}\n",
              widget_id->s_name, canvas_id->s_name);
 #endif
 }
@@ -243,7 +243,7 @@ void tkwidgets_bind_key_events(t_symbol *canvas_id, t_symbol *widget_id)
 void tkwidgets_bind_mouse_events(t_symbol *canvas_id, t_symbol *widget_id)
 {
     /* mouse buttons */
-    sys_vgui("bind %s <Button> {pdtk_canvas_sendclick %s \
+    sys_vgui("bind %s <Button> {pdtk_canvas_mouse %s \
 [expr %%X - [winfo rootx %s]] [expr %%Y - [winfo rooty %s]] %%b 0}\n",
              widget_id->s_name, canvas_id->s_name, 
              canvas_id->s_name, canvas_id->s_name);
@@ -251,7 +251,7 @@ void tkwidgets_bind_mouse_events(t_symbol *canvas_id, t_symbol *widget_id)
 [expr %%X - [winfo rootx %s]] [expr %%Y - [winfo rooty %s]] %%b}\n",
              widget_id->s_name, canvas_id->s_name, 
              canvas_id->s_name, canvas_id->s_name);
-    sys_vgui("bind %s <Shift-Button> {pdtk_canvas_click %s \
+    sys_vgui("bind %s <Shift-Button> {pdtk_canvas_mouse %s \
 [expr %%X - [winfo rootx %s]] [expr %%Y - [winfo rooty %s]] %%b 1}\n",
              widget_id->s_name, canvas_id->s_name, 
              canvas_id->s_name, canvas_id->s_name);
