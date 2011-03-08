@@ -13,16 +13,16 @@ set ::select_fill "#bdbddd"
 
 namespace eval ::tkwidgets:: {
     variable handle_tag "tkwidgets-RESIZE"
-    variable handle_id ".$handle_tag"
+    variable handle_size 15
 }
 
 proc ::tkwidgets::set_up_variables {instance tkcanvas} {
     set my ::$instance
-    variable ${my}::canvas_id "$tkcanvas"
     variable ${my}::receive_name "#$instance"
+    variable ${my}::canvas_id "$tkcanvas"
     variable ${my}::frame_id "$tkcanvas.$instance-f"
     variable ${my}::widget_id "$frame_id.w"
-    variable ${my}::handle_id "RESIZE"
+    variable ${my}::handle_id "$canvas_id.handle"
     variable ${my}::window_tag "entrywindow$instance"
     variable ${my}::all_tag "entry$instance"
     variable ${my}::font [font create -family Helvetica -size 24]
@@ -62,7 +62,7 @@ proc ::tkwidgets::erase_iolets {my} {
 }
 
 proc ::tkwidgets::resize_click {my receive_name state} {
-    variable handle_id
+    variable ${my}::handle_id
     if {$state} {
         bind $handle_id <Motion>  "::tkwidgets::resize_motion $my $receive_name %x %y"
     } else {
@@ -72,27 +72,43 @@ proc ::tkwidgets::resize_click {my receive_name state} {
 }
 
 proc ::tkwidgets::resize_motion {my receive_name x y} {
-    pdsend "$receive_name resize_motion $x $y"
+    variable handle_tag
+    variable handle_size
+    variable ${my}::canvas_id
+    variable ${my}::window_tag
+    variable ${my}::framex1
+    variable ${my}::framex2
+    variable ${my}::framey2
+    variable ${my}::width
+
+    set width [expr $width + $x]
+    if [expr $width > 15] {
+        $canvas_id itemconfigure $window_tag -width $width
+        $canvas_id coords $handle_tag [expr $framex1 + $width - $handle_size] \
+            [expr $framey2 - $handle_size]
+        pdsend "$receive_name resize_motion $x 0"
+    } else {
+        set width 15
+    }
+    set framex2 [expr $framex1 + $width]
 }
 
 proc ::tkwidgets::make_resize_handle {my x y} {
-    variable handle_id
     variable handle_tag
-    variable ${my}::canvas_id
+    variable handle_size
     variable ${my}::receive_name
+    variable ${my}::canvas_id
+    variable ${my}::handle_id
     variable ${my}::all_tag
-    set size 15
-    set handle_id $canvas_id.handle
     $canvas_id delete $handle_tag
     destroy $handle_id
-    canvas $handle_id -width $size -height $size -bg #ddd -bd 0 \
+    canvas $handle_id -width $handle_size -height $handle_size -bg #ddd -bd 0 \
         -highlightthickness 3 -highlightcolor #f00 -cursor bottom_right_corner
-    $canvas_id create window [expr $x - $size] [expr $y - $size] -anchor nw \
-        -width $size -height $size -window $handle_id -tags [list $handle_tag $all_tag]
-    $canvas_id raise $handle_id
+    $canvas_id create window [expr $x - $handle_size] [expr $y - $handle_size] -anchor nw \
+        -width $handle_size -height $handle_size -window $handle_id -tags [list $handle_tag $all_tag]
+    raise $handle_id
     bind $handle_id <ButtonPress>   "::tkwidgets::resize_click $my $receive_name 1"
     bind $handle_id <ButtonRelease> "::tkwidgets::resize_click $my $receive_name 0"
-    puts stderr "::tkwidgets::make_resize_handle $my $x $y $size $receive_name"
 }
 
 #------------------------------------------------------------------------------#
@@ -147,13 +163,21 @@ proc ::tkwidgets::entry::setrect {my x1 y1 x2 y2} {
     variable ${my}::framex2 $x2
     variable ${my}::framey2 $y2
     # we receive the width in pixels but need to convert it to chars
-    variable ${my}::width [expr int(($x2-$x1)/[font measure $font "n"])]
+    variable ${my}::width [expr int($x2-$x1)]
 }
 
 proc ::tkwidgets::entry::displace {my mytoplevel dx dy} {
     variable ${my}::all_tag
+    variable ${my}::framex1
+    variable ${my}::framey1
+    variable ${my}::framex2
+    variable ${my}::framey2
     set tkcanvas [tkcanvas_name $mytoplevel]
     $tkcanvas move $all_tag $dx $dy
+    set framex1 [expr $framex1 + $dx]
+    set framey1 [expr $framey1 + $dy]
+    set framex2 [expr $framex2 + $dx]
+    set framey2 [expr $framey2 + $dy]
 }
 
 proc ::tkwidgets::entry::select {my mytoplevel state} {
@@ -230,7 +254,7 @@ proc ::tkwidgets::entry::new {instance tkcanvas} {
 proc tkwidgets::entry::setup {} {
     # check if we are Pd < 0.43, which has no 'pdsend', but a 'pd' coded in C
     if {[llength [info procs "::pdsend"]] == 0} {
-        proc ::pdsend {args} {pd "[join $args { }] ;"}
+        proc ::pdsend {args} {::pd "[join $args { }] ;"}
     }
 
     # if loading in standalone mode without Pd, then create a window

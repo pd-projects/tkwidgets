@@ -2,10 +2,7 @@
 #include "m_pd.h"
 #include "tkwidgets.h"
 
-
-
 #define DEBUG(x) x
-
 
 static t_class *entry_class;
 static t_widgetbehavior entry_widgetbehavior;
@@ -19,11 +16,11 @@ typedef struct _entry
 
     int         width;
     int         height;
+    int         resizing;
     
     /* IDs for Tk widgets */
 	t_symbol*   my; /* per-instance namespace for localizing Tcl vars */
     t_symbol*   receive_name;  /* name to bind to to receive callbacks */
-	t_symbol*   canvas_id;  
     
     t_outlet*   x_data_outlet;
     t_outlet*   x_status_outlet;
@@ -31,6 +28,52 @@ typedef struct _entry
 
 /* ------------------------------------------------------------------------ */
 /* support functions */
+
+/* ------------------------------------------------------------------------ */
+/* callback functions */
+
+static void entry_set_position(t_entry* x, t_float x1, t_float y1) 
+{
+    x->x_obj.te_xpix = (int)x1;
+    x->x_obj.te_ypix = (int)y1;
+}
+
+static void entry_resize_click_callback(t_entry *x, t_floatarg f)
+{
+    t_canvas *canvas = (glist_isvisible(x->x_glist) ? x->x_canvas : 0);
+    int button_state = (int)f;
+    if(x->resizing && !button_state && canvas)
+        canvas_fixlinesfor(x->x_glist, (t_text *)x);  // 2nd inlet
+    x->resizing = button_state;
+}
+
+static void entry_resize_motion_callback(t_entry *x, t_floatarg f1, t_floatarg f2)
+{
+    DEBUG(post("entry_resize_motion_callback"););
+    if (x->resizing)
+    {
+        int dx = (int)f1, dy = (int)f2;
+        if (glist_isvisible(x->x_glist))
+        {
+            x->width += dx;
+            x->height += dy;
+            canvas_fixlinesfor(x->x_glist, (t_text *)x);
+        }
+    }
+}
+
+/* ------------------------------------------------------------------------ */
+/* methods for messages */
+
+static void entry_position(t_entry* x, t_float width, t_float height) 
+{
+    // TODO
+}
+
+static void entry_size(t_entry* x, t_float width, t_float height) 
+{
+    // TODO
+}
 
 /* ------------------------------------------------------------------------ */
 /* t_widgetbehavior functions */
@@ -158,6 +201,20 @@ void entry_setup(void)
     entry_widgetbehavior.w_clickfn    = entry_click;
     class_setwidget(entry_class, &entry_widgetbehavior);
     class_setsavefn(entry_class, &entry_save);
+
+/* callbacks */
+    class_addmethod(entry_class, (t_method)entry_set_position,
+                    gensym("set_position"), A_DEFFLOAT, A_DEFFLOAT, 0);
+    class_addmethod(entry_class, (t_method)entry_resize_click_callback,
+                    gensym("resize_click"), A_FLOAT, 0);
+    class_addmethod(entry_class, (t_method)entry_resize_motion_callback,
+                    gensym("resize_motion"), A_FLOAT, A_FLOAT, 0);
+
+/* methods for messages in pd space */
+    class_addmethod(entry_class, (t_method)entry_position,
+                    gensym("position"), A_DEFFLOAT, A_DEFFLOAT, 0);
+    class_addmethod(entry_class, (t_method)entry_size,
+                    gensym("size"), A_DEFFLOAT, A_DEFFLOAT, 0);
 
     /* TODO should this use t_class->c_name? */
     sys_vgui("eval [read [open %s/entry.tcl]]\n",
