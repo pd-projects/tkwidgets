@@ -78,19 +78,25 @@ proc ::tkwidgets::resize_motion {my receive_name x y} {
     variable ${my}::window_tag
     variable ${my}::framex1
     variable ${my}::framex2
+    variable ${my}::framey1
     variable ${my}::framey2
-    variable ${my}::width
 
-    set width [expr $width + $x]
-    if [expr $width > 15] {
-        $canvas_id itemconfigure $window_tag -width $width
-        $canvas_id coords $handle_tag [expr $framex1 + $width - $handle_size] \
-            [expr $framey2 - $handle_size]
-        pdsend "$receive_name resize_motion $x 0"
-    } else {
+    set framex2 [expr $framex2 + $x]
+    set width [expr $framex2 - $framex1]
+    if [expr $width < 15] {
         set width 15
+        set framex2 [expr $framex1 + 15]
     }
-    set framex2 [expr $framex1 + $width]
+    set framey2 [expr $framey2 + $y]
+    set height [expr $framey2 - $framey1]
+    if [expr $height < 15] {
+        set height 15
+        set framey2 [expr $framey1 + 15]
+    }
+    $canvas_id itemconfigure $window_tag -width $width -height $height
+    $canvas_id coords $handle_tag [expr $framex2 - $handle_size] \
+        [expr $framey2 - $handle_size]
+    pdsend "$receive_name resize_motion $x $y"
 }
 
 proc ::tkwidgets::make_resize_handle {my x y} {
@@ -139,12 +145,11 @@ proc ::tkwidgets::entry::drawme {my mytoplevel} {
     variable ${my}::framey1
     variable ${my}::framex2
     variable ${my}::framey2
-    variable ${my}::width
     variable ${my}::font
     
     set canvas_id [tkcanvas_name $mytoplevel]
     frame $frame_id
-    entry $widget_id -width $width -font $font -relief sunken
+    entry $widget_id -font $font -relief sunken
     pack $widget_id -side left -fill both -expand 1
     pack $frame_id -side bottom -fill both -expand 1
     $canvas_id create window $framex1 $framey1 -anchor nw -window $frame_id \
@@ -157,13 +162,10 @@ proc ::tkwidgets::entry::drawme {my mytoplevel} {
 # widgetbehavior procs
 
 proc ::tkwidgets::entry::setrect {my x1 y1 x2 y2} {
-    variable ${my}::font
     variable ${my}::framex1 $x1
     variable ${my}::framey1 $y1
     variable ${my}::framex2 $x2
     variable ${my}::framey2 $y2
-    # we receive the width in pixels but need to convert it to chars
-    variable ${my}::width [expr int($x2-$x1)]
 }
 
 proc ::tkwidgets::entry::displace {my mytoplevel dx dy} {
@@ -181,7 +183,9 @@ proc ::tkwidgets::entry::displace {my mytoplevel dx dy} {
 }
 
 proc ::tkwidgets::entry::select {my mytoplevel state} {
+    variable ${my}::canvas_id
     variable ${my}::widget_id
+    variable ${my}::handle_id
     variable ${my}::background
     
     if {$state} {
@@ -191,7 +195,7 @@ proc ::tkwidgets::entry::select {my mytoplevel state} {
     } else {
         $widget_id configure -background $background -state normal -cursor xterm
         # activatefn never gets called with 0, so destroy handle here
-        destroy ${my}::handle_id
+        $canvas_id delete $handle_id
     }
 }
 
@@ -238,7 +242,6 @@ proc ::tkwidgets::entry::new {instance tkcanvas} {
         variable framey1
         variable framex2
         variable framey2
-        variable width
         variable font
 
         variable cursor
@@ -252,10 +255,7 @@ proc ::tkwidgets::entry::new {instance tkcanvas} {
 
 # sets up the class
 proc tkwidgets::entry::setup {} {
-    # check if we are Pd < 0.43, which has no 'pdsend', but a 'pd' coded in C
-    if {[llength [info procs "::pdsend"]] == 0} {
-        proc ::pdsend {args} {::pd "[join $args { }] ;"}
-    }
+
 
     # if loading in standalone mode without Pd, then create a window
     # and canvas to work with.

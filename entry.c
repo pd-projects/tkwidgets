@@ -14,8 +14,8 @@ typedef struct _entry
     t_glist*    x_glist;       /* glist that owns this widget */
     t_binbuf*   options_binbuf;/* binbuf to save options state in */
 
-    int         width;
-    int         height;
+    int         width;         /* only stores setting before vis happens */
+    int         height;        /* only stores setting before vis happens */
     int         resizing;
     
     /* IDs for Tk widgets */
@@ -49,7 +49,6 @@ static void entry_resize_click_callback(t_entry *x, t_floatarg f)
 
 static void entry_resize_motion_callback(t_entry *x, t_floatarg f1, t_floatarg f2)
 {
-    DEBUG(post("entry_resize_motion_callback"););
     if (x->resizing)
     {
         int dx = (int)f1, dy = (int)f2;
@@ -124,7 +123,7 @@ static void entry_vis(t_gobj *z, t_glist *glist, int vis)
                  x,
                  text_xpix(&x->x_obj, glist),
                  text_ypix(&x->x_obj, glist),
-                 text_xpix(&x->x_obj, glist) + x->width, 
+                 text_xpix(&x->x_obj, glist) + x->width,
                  text_ypix(&x->x_obj, glist) + x->height);
     }
     sys_vgui("::tkwidgets::entry::vis ::%lx .x%lx %d\n", x, glist, vis);
@@ -153,8 +152,9 @@ static void* entry_new(t_symbol* s, int argc, t_atom *argv)
 
     x->options_binbuf = binbuf_new();
 
-    x->width = 300;
-    x->height = 60;
+    /* default size 200x20 */
+    x->width = 200;
+    x->height = 20;
 
     if(argc > 0) x->width = atom_getint(argv);
     if(argc > 1) x->height = atom_getint(argv + 1);
