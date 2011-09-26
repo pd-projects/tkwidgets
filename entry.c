@@ -1,4 +1,6 @@
 
+#include <stdio.h>
+
 #include "m_pd.h"
 #include "tkwidgets.h"
 
