@@ -22,7 +22,7 @@ MANUAL =
 # list them here.  This can be anything from header files, test patches,
 # documentation, etc.  README.txt and LICENSE.txt are required and therefore
 # automatically included
-EXTRA_DIST = tkwidgets.h tkwidgets.c
+EXTRA_DIST = 
 
 
 
@@ -35,6 +35,7 @@ EXTRA_DIST = tkwidgets.h tkwidgets.c
 # -I"$(PD_INCLUDE)/pd" supports the header location for 0.43
 CFLAGS = -I"$(PD_INCLUDE)/pd" -Wall -W -g
 LDFLAGS =  
+SHARED_LDFLAGS =
 LIBS = 
 
 #------------------------------------------------------------------------------#
@@ -72,6 +73,7 @@ ifeq ($(UNAME),Darwin)
   ifeq ($(CPU),arm) # iPhone/iPod Touch
     SOURCES += $(SOURCES_iphoneos)
     EXTENSION = pd_darwin
+    SHARED_EXTENSION= dylib
     OS = iphoneos
     PD_PATH = /Applications/Pd-extended.app/Contents/Resources
     IPHONE_BASE=/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin
@@ -83,12 +85,14 @@ ifeq ($(UNAME),Darwin)
     OPT_CFLAGS = -fast -funroll-loops -fomit-frame-pointer
 	CFLAGS := $(IPHONE_CFLAGS) $(OPT_CFLAGS) $(CFLAGS)
     LDFLAGS += -arch armv6 -bundle -undefined dynamic_lookup $(ISYSROOT)
+    SHARED_LDFLAGS += -arch armv6 -dynamiclib -undefined dynamic_lookup $(ISYSROOT)
     LIBS += -lc 
     STRIP = strip -x
     DISTBINDIR=$(DISTDIR)-$(OS)
   else # Mac OS X
     SOURCES += $(SOURCES_macosx)
     EXTENSION = pd_darwin
+    SHARED_EXTENSION= dylib
     OS = macosx
     PD_PATH = /Applications/Pd-extended.app/Contents/Resources
     OPT_CFLAGS = -ftree-vectorize -ftree-vectorizer-verbose=2 -fast
@@ -100,10 +104,12 @@ ifeq ($(UNAME),Darwin)
       SOURCES += $(SOURCES_iphoneos)
     endif
     CFLAGS += $(FAT_FLAGS) -fPIC -I/sw/include
-    LDFLAGS += $(FAT_FLAGS) -bundle -undefined dynamic_lookup -L/sw/lib
+    BUNDLE_LOADER = $(shell test ! -e $(PD_PATH)/bin/pd || echo -bundle_loader $(PD_PATH)/bin/pd)
+    LDFLAGS += $(FAT_FLAGS) -bundle $(BUNDLE_LOADER) -undefined dynamic_lookup
     # if the 'pd' binary exists, check the linking against it to aid with stripping
-    LDFLAGS += $(shell test -e $(PD_PATH)/bin/pd && echo -bundle_loader $(PD_PATH)/bin/pd)
-    LIBS += -lc 
+    SHARED_LDFLAGS += $(FAT_FLAGS) -dynamiclib -undefined dynamic_lookup \
+	-install_name $(SHARED_LIB) -compatibility_version 1 -current_version 1.0
+    LIBS += -lc -L/sw/lib
     STRIP = strip -x
     DISTBINDIR=$(DISTDIR)-$(OS)
 # install into ~/Library/Pd on Mac OS X since /usr/local isn't used much
@@ -116,6 +122,7 @@ ifeq ($(UNAME),ANDROID)
   CPU := arm
   SOURCES += $(SOURCES_android)
   EXTENSION = pd_linux
+  SHARED_EXTENSION= so
   OS = android
   PD_PATH = /usr
   NDK_BASE := /usr/local/android-ndk
@@ -126,7 +133,8 @@ ifeq ($(UNAME),ANDROID)
   CC := $(NDK_TOOLCHAIN_BASE)/bin/arm-linux-androideabi-gcc --sysroot=$(NDK_SYSROOT)
   OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
   CFLAGS += 
-  LDFLAGS += -Wl,--export-dynamic -shared
+  LDFLAGS += -rdynamic -shared
+  SHARED_LDFLAGS += -Wl,-soname,$(SHARED_LIB) -shared
   LIBS += -lc
   STRIP := $(NDK_TOOLCHAIN_BASE)/bin/arm-linux-androideabi-strip \
 	--strip-unneeded -R .note -R .comment
@@ -136,11 +144,12 @@ ifeq ($(UNAME),Linux)
   CPU := $(shell uname -m)
   SOURCES += $(SOURCES_linux)
   EXTENSION = pd_linux
+  SHARED_EXTENSION= so
   OS = linux
   PD_PATH = /usr
   OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
   CFLAGS += -fPIC
-  LDFLAGS += -Wl,--export-dynamic  -shared -fPIC
+  LDFLAGS += -rdynamic  -shared -fPIC
   LIBS += -lc
   STRIP = strip --strip-unneeded -R .note -R .comment
   DISTBINDIR=$(DISTDIR)-$(OS)-$(shell uname -m)
@@ -150,11 +159,13 @@ ifeq ($(UNAME),GNU)
   CPU := $(shell uname -m)
   SOURCES += $(SOURCES_linux)
   EXTENSION = pd_linux
+  SHARED_EXTENSION= so
   OS = linux
   PD_PATH = /usr
   OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
   CFLAGS += -fPIC
-  LDFLAGS += -Wl,--export-dynamic  -shared -fPIC
+  LDFLAGS += -rdynamic  -shared -fPIC
+  SHARED_LDFLAGS += -Wl,-soname,$(SHARED_LIB) -shared
   LIBS += -lc
   STRIP = strip --strip-unneeded -R .note -R .comment
   DISTBINDIR=$(DISTDIR)-$(OS)-$(shell uname -m)
@@ -164,11 +175,13 @@ ifeq ($(UNAME),GNU/kFreeBSD)
   CPU := $(shell uname -m)
   SOURCES += $(SOURCES_linux)
   EXTENSION = pd_linux
+  SHARED_EXTENSION= so
   OS = linux
   PD_PATH = /usr
   OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
   CFLAGS += -fPIC
-  LDFLAGS += -Wl,--export-dynamic  -shared -fPIC
+  LDFLAGS += -rdynamic  -shared -fPIC
+  SHARED_LDFLAGS += -Wl,-soname,$(SHARED_LIB) -shared
   LIBS += -lc
   STRIP = strip --strip-unneeded -R .note -R .comment
   DISTBINDIR=$(DISTDIR)-$(OS)-$(shell uname -m)
@@ -177,12 +190,14 @@ ifeq (CYGWIN,$(findstring CYGWIN,$(UNAME)))
   CPU := $(shell uname -m)
   SOURCES += $(SOURCES_cygwin)
   EXTENSION = dll
+  SHARED_EXTENSION= dll
   OS = cygwin
   PD_PATH = $(shell cygpath $$PROGRAMFILES)/pd
   OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
   CFLAGS += 
-  LDFLAGS += -Wl,--export-dynamic -shared -L"$(PD_PATH)/src" -L"$(PD_PATH)/bin"
-  LIBS += -lc -lpd
+  LDFLAGS += -rdynamic -shared
+  SHARED_LDFLAGS += -Wl,-soname,$(SHARED_LIB) -shared
+  LIBS +=  -L"$(PD_PATH)/src" -L"$(PD_PATH)/bin" -lc -lpd
   STRIP = strip --strip-unneeded -R .note -R .comment
   DISTBINDIR=$(DISTDIR)-$(OS)
 endif
@@ -190,6 +205,7 @@ ifeq (MINGW,$(findstring MINGW,$(UNAME)))
   CPU := $(shell uname -m)
   SOURCES += $(SOURCES_windows)
   EXTENSION = dll
+  SHARED_EXTENSION= dll
   OS = windows
   PD_PATH = $(shell cd "$$PROGRAMFILES/pd" && pwd)
   # MinGW doesn't seem to include cc so force gcc
@@ -207,16 +223,20 @@ HELPPATCHES ?= $(SOURCES:.c=-help.pd) $(PDOBJECTS:.pd=-help.pd)
 
 CFLAGS += $(OPT_CFLAGS)
 
+SHARED_SOURCE ?= $(shell test ! -e ./lib$(LIBRARY_NAME).c || \
+	echo ./lib$(LIBRARY_NAME).c )
+SHARED_HEADER ?= $(shell test ! -e $(LIBRARY_NAME).h || echo $(LIBRARY_NAME).h)
+SHARED_LIB = $(SHARED_SOURCE:.c=.$(SHARED_EXTENSION))
 
 .PHONY = install libdir_install single_install install-doc install-exec install-examples install-manual clean dist etags $(LIBRARY_NAME)
 
-all: $(SOURCES:.c=.$(EXTENSION))
+all: $(SOURCES:.c=.$(EXTENSION)) $(SHARED_LIB)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -o "$*.o" -c "$*.c"
 
-%.$(EXTENSION): %.o tkwidgets.o
-	$(CC) $(LDFLAGS) -o "$*.$(EXTENSION)" "$*.o" tkwidgets.o  $(LIBS)
+%.$(EXTENSION): %.o $(SHARED_LIB)
+	$(CC) $(LDFLAGS) -o "$*.$(EXTENSION)" "$*.o" $(LIBS) $(SHARED_LIB)
 	chmod a-x "$*.$(EXTENSION)"
 
 # this links everything into a single binary file
@@ -224,17 +244,23 @@ $(LIBRARY_NAME): $(SOURCES:.c=.o) $(LIBRARY_NAME).o
 	$(CC) $(LDFLAGS) -o $(LIBRARY_NAME).$(EXTENSION) $(SOURCES:.c=.o) $(LIBRARY_NAME).o $(LIBS)
 	chmod a-x $(LIBRARY_NAME).$(EXTENSION)
 
+$(SHARED_LIB): $(SHARED_SOURCE:.c=.o)
+	$(CC) $(SHARED_LDFLAGS) -o $(SHARED_LIB) $(SHARED_SOURCE:.c=.o) $(LIBS)
+
 install: libdir_install
 
 # The meta and help files are explicitly installed to make sure they are
 # actually there.  Those files are not optional, then need to be there.
-libdir_install: $(SOURCES:.c=.$(EXTENSION)) install-doc install-examples install-manual
+libdir_install: $(SOURCES:.c=.$(EXTENSION)) $(SHARED_LIB) install-doc install-examples install-manual
 	$(INSTALL_DIR) $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
 	$(INSTALL_DATA) $(LIBRARY_NAME)-meta.pd \
 		$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
 	test -z "$(strip $(SOURCES))" || (\
 		$(INSTALL_PROGRAM) $(SOURCES:.c=.$(EXTENSION)) $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME) && \
 		$(STRIP) $(addprefix $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/,$(SOURCES:.c=.$(EXTENSION))))
+	test -z "$(strip $(SHARED_LIB))" || \
+		$(INSTALL_DATA) $(SHARED_LIB) \
+			$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
 	test -z "$(strip $(shell ls $(SOURCES:.c=.tcl)))" || \
 		$(INSTALL_DATA) $(shell ls $(SOURCES:.c=.tcl)) \
 			$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
@@ -272,18 +298,19 @@ install-manual:
 
 
 clean:
-	-rm -f -- $(SOURCES:.c=.o) $(SOURCES_LIB:.c=.o)
-	-rm -f -- $(SOURCES:.c=.$(EXTENSION))
-	-rm -f -- $(LIBRARY_NAME).o
-	-rm -f -- $(LIBRARY_NAME).$(EXTENSION)
+	-rm -- $(SOURCES:.c=.o) $(SOURCES_LIB:.c=.o) $(SHARED_SOURCE:.c=.o)
+	-rm -- $(SOURCES:.c=.$(EXTENSION))
+	-rm -- $(LIBRARY_NAME).o
+	-rm -- $(LIBRARY_NAME).$(EXTENSION)
+	-rm -- $(SHARED_LIB)
 
 distclean: clean
-	-rm -f -- $(DISTBINDIR).tar.gz
-	-rm -rf -- $(DISTBINDIR)
-	-rm -f -- $(DISTDIR).tar.gz
-	-rm -rf -- $(DISTDIR)
-	-rm -f -- $(ORIGDIR).tar.gz
-	-rm -rf -- $(ORIGDIR)
+	-rm -- $(DISTBINDIR).tar.gz
+	-rm -r -- $(DISTBINDIR)
+	-rm -- $(DISTDIR).tar.gz
+	-rm -r -- $(DISTDIR)
+	-rm -- $(ORIGDIR).tar.gz
+	-rm -r -- $(ORIGDIR)
 
 
 $(DISTBINDIR):
@@ -291,7 +318,7 @@ $(DISTBINDIR):
 
 libdir: all $(DISTBINDIR)
 	$(INSTALL_DATA) $(LIBRARY_NAME)-meta.pd  $(DISTBINDIR)
-	$(INSTALL_DATA) $(SOURCES)  $(DISTBINDIR)
+	$(INSTALL_DATA) $(SOURCES) $(SHARED_SOURCE) $(SHARED_HEADER) $(DISTBINDIR)
 	$(INSTALL_DATA) $(HELPPATCHES) $(DISTBINDIR)
 	test -z "$(strip $(EXTRA_DIST))" || \
 		$(INSTALL_DATA) $(EXTRA_DIST)    $(DISTBINDIR)
@@ -312,6 +339,10 @@ dist: $(DISTDIR)
 		$(INSTALL_DATA) $(ALLSOURCES)  $(DISTDIR)
 	test -z "$(strip $(shell ls $(ALLSOURCES:.c=.tcl)))" || \
 		$(INSTALL_DATA) $(shell ls $(ALLSOURCES:.c=.tcl))  $(DISTDIR)
+	test -z "$(strip $(SHARED_HEADER))" || \
+		$(INSTALL_DATA) $(SHARED_HEADER)  $(DISTDIR)
+	test -z "$(strip $(SHARED_SOURCE))" || \
+		$(INSTALL_DATA) $(SHARED_SOURCE)  $(DISTDIR)
 	test -z "$(strip $(PDOBJECTS))" || \
 		$(INSTALL_DATA) $(PDOBJECTS)  $(DISTDIR)
 	test -z "$(strip $(HELPPATCHES))" || \
@@ -354,6 +385,9 @@ showsetup:
 	@echo "LIBRARY_NAME: $(LIBRARY_NAME)"
 	@echo "LIBRARY_VERSION: $(LIBRARY_VERSION)"
 	@echo "SOURCES: $(SOURCES)"
+	@echo "SHARED_HEADER: $(SHARED_HEADER)"
+	@echo "SHARED_SOURCE: $(SHARED_SOURCE)"
+	@echo "SHARED_LIB: $(SHARED_LIB)"
 	@echo "PDOBJECTS: $(PDOBJECTS)"
 	@echo "ALLSOURCES: $(ALLSOURCES)"
 	@echo "UNAME: $(UNAME)"
