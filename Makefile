@@ -261,8 +261,8 @@ libdir_install: $(SOURCES:.c=.$(EXTENSION)) $(SHARED_LIB) install-doc install-ex
 	test -z "$(strip $(SHARED_LIB))" || \
 		$(INSTALL_DATA) $(SHARED_LIB) \
 			$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
-	test -z "$(strip $(shell ls $(SOURCES:.c=.tcl)))" || \
-		$(INSTALL_DATA) $(shell ls $(SOURCES:.c=.tcl)) \
+	test -z "$(strip $(wildcard $(SOURCES:.c=.tcl)))" || \
+		$(INSTALL_DATA) $(wildcard $(SOURCES:.c=.tcl)) \
 			$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
 	test -z "$(strip $(PDOBJECTS))" || \
 		$(INSTALL_DATA) $(PDOBJECTS) \
@@ -298,19 +298,19 @@ install-manual:
 
 
 clean:
-	-rm -- $(SOURCES:.c=.o) $(SOURCES_LIB:.c=.o) $(SHARED_SOURCE:.c=.o)
-	-rm -- $(SOURCES:.c=.$(EXTENSION))
-	-rm -- $(LIBRARY_NAME).o
-	-rm -- $(LIBRARY_NAME).$(EXTENSION)
-	-rm -- $(SHARED_LIB)
+	-rm -f -- $(SOURCES:.c=.o) $(SOURCES_LIB:.c=.o) $(SHARED_SOURCE:.c=.o)
+	-rm -f -- $(SOURCES:.c=.$(EXTENSION))
+	-rm -f -- $(LIBRARY_NAME).o
+	-rm -f -- $(LIBRARY_NAME).$(EXTENSION)
+	-rm -f -- $(SHARED_LIB)
 
 distclean: clean
-	-rm -- $(DISTBINDIR).tar.gz
-	-rm -r -- $(DISTBINDIR)
-	-rm -- $(DISTDIR).tar.gz
-	-rm -r -- $(DISTDIR)
-	-rm -- $(ORIGDIR).tar.gz
-	-rm -r -- $(ORIGDIR)
+	-rm -f -- $(DISTBINDIR).tar.gz
+	-rm -rf -- $(DISTBINDIR)
+	-rm -f -- $(DISTDIR).tar.gz
+	-rm -f -rf -- $(DISTDIR)
+	-rm -f -- $(ORIGDIR).tar.gz
+	-rm -rf -- $(ORIGDIR)
 
 
 $(DISTBINDIR):
@@ -337,8 +337,8 @@ dist: $(DISTDIR)
 	$(INSTALL_DATA) $(LIBRARY_NAME)-meta.pd  $(DISTDIR)
 	test -z "$(strip $(ALLSOURCES))" || \
 		$(INSTALL_DATA) $(ALLSOURCES)  $(DISTDIR)
-	test -z "$(strip $(shell ls $(ALLSOURCES:.c=.tcl)))" || \
-		$(INSTALL_DATA) $(shell ls $(ALLSOURCES:.c=.tcl))  $(DISTDIR)
+	test -z "$(strip $(wildcard $(ALLSOURCES:.c=tcl)))" || \
+		$(INSTALL_DATA) $(wildcard $(ALLSOURCES:.c=tcl))  $(DISTDIR)
 	test -z "$(strip $(SHARED_HEADER))" || \
 		$(INSTALL_DATA) $(SHARED_HEADER)  $(DISTDIR)
 	test -z "$(strip $(SHARED_SOURCE))" || \
@@ -390,6 +390,7 @@ showsetup:
 	@echo "SHARED_LIB: $(SHARED_LIB)"
 	@echo "PDOBJECTS: $(PDOBJECTS)"
 	@echo "ALLSOURCES: $(ALLSOURCES)"
+	@echo "ALLSOURCES TCL: $(wildcard $(ALLSOURCES:.c=.tcl))"
 	@echo "UNAME: $(UNAME)"
 	@echo "CPU: $(CPU)"
 	@echo "pkglibdir: $(pkglibdir)"
