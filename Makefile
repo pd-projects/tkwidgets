@@ -108,7 +108,7 @@ ifeq ($(UNAME),Darwin)
     LDFLAGS += $(FAT_FLAGS) -bundle $(BUNDLE_LOADER) -undefined dynamic_lookup
     # if the 'pd' binary exists, check the linking against it to aid with stripping
     SHARED_LDFLAGS += $(FAT_FLAGS) -dynamiclib -undefined dynamic_lookup \
-	-install_name $(SHARED_LIB) -compatibility_version 1 -current_version 1.0
+	-install_name @loader_path/$(SHARED_LIB) -compatibility_version 1 -current_version 1.0
     LIBS += -lc -L/sw/lib
     STRIP = strip -x
     DISTBINDIR=$(DISTDIR)-$(OS)
@@ -223,8 +223,8 @@ HELPPATCHES ?= $(SOURCES:.c=-help.pd) $(PDOBJECTS:.pd=-help.pd)
 
 CFLAGS += $(OPT_CFLAGS)
 
-SHARED_SOURCE ?= $(shell test ! -e ./lib$(LIBRARY_NAME).c || \
-	echo ./lib$(LIBRARY_NAME).c )
+SHARED_SOURCE ?= $(shell test ! -e lib$(LIBRARY_NAME).c || \
+	echo lib$(LIBRARY_NAME).c )
 SHARED_HEADER ?= $(shell test ! -e $(LIBRARY_NAME).h || echo $(LIBRARY_NAME).h)
 SHARED_LIB = $(SHARED_SOURCE:.c=.$(SHARED_EXTENSION))
 
