@@ -33,7 +33,7 @@ EXTRA_DIST =
 #------------------------------------------------------------------------------#
 
 # -I"$(PD_INCLUDE)/pd" supports the header location for 0.43
-CFLAGS = -I"$(PD_INCLUDE)/pd" -Wall -W -g
+CFLAGS = -I"$(PD_INCLUDE)" -Wall -W -g
 LDFLAGS =  
 SHARED_LDFLAGS =
 LIBS = 
@@ -49,7 +49,7 @@ LIBRARY_VERSION = $(shell sed -n 's|^\#X text [0-9][0-9]* [0-9][0-9]* VERSION \(
 
 CFLAGS += -DPD -DVERSION='"$(LIBRARY_VERSION)"'
 
-PD_INCLUDE = $(PD_PATH)/include
+PD_INCLUDE = $(PD_PATH)
 # where to install the library, overridden below depending on platform
 prefix = /usr/local
 libdir = $(prefix)/lib
@@ -150,6 +150,8 @@ ifeq ($(UNAME),Linux)
   OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
   CFLAGS += -fPIC
   LDFLAGS += -rdynamic  -shared -fPIC
+  SHARED_LDFLAGS += -Wl,-soname,$(SHARED_LIB) -shared
+  SHARED_LDFLAGS += -rdynamic  -shared -fPIC
   LIBS += -lc
   STRIP = strip --strip-unneeded -R .note -R .comment
   DISTBINDIR=$(DISTDIR)-$(OS)-$(shell uname -m)
@@ -165,7 +167,7 @@ ifeq ($(UNAME),GNU)
   OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
   CFLAGS += -fPIC
   LDFLAGS += -rdynamic  -shared -fPIC
-  SHARED_LDFLAGS += -Wl,-soname,$(SHARED_LIB) -shared
+  SHARED_LDFLAGS += -shared -Wl,-soname,$(SHARED_LIB)
   LIBS += -lc
   STRIP = strip --strip-unneeded -R .note -R .comment
   DISTBINDIR=$(DISTDIR)-$(OS)-$(shell uname -m)
@@ -181,7 +183,7 @@ ifeq ($(UNAME),GNU/kFreeBSD)
   OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
   CFLAGS += -fPIC
   LDFLAGS += -rdynamic  -shared -fPIC
-  SHARED_LDFLAGS += -Wl,-soname,$(SHARED_LIB) -shared
+  SHARED_LDFLAGS += -shared -Wl,-soname,$(SHARED_LIB)
   LIBS += -lc
   STRIP = strip --strip-unneeded -R .note -R .comment
   DISTBINDIR=$(DISTDIR)-$(OS)-$(shell uname -m)
@@ -196,7 +198,7 @@ ifeq (CYGWIN,$(findstring CYGWIN,$(UNAME)))
   OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
   CFLAGS += 
   LDFLAGS += -rdynamic -shared
-  SHARED_LDFLAGS += -Wl,-soname,$(SHARED_LIB) -shared
+  SHARED_LDFLAGS += -shared -Wl,-soname,$(SHARED_LIB)
   LIBS +=  -L"$(PD_PATH)/src" -L"$(PD_PATH)/bin" -lc -lpd
   STRIP = strip --strip-unneeded -R .note -R .comment
   DISTBINDIR=$(DISTDIR)-$(OS)
@@ -213,6 +215,7 @@ ifeq (MINGW,$(findstring MINGW,$(UNAME)))
   OPT_CFLAGS = -O3 -funroll-loops -fomit-frame-pointer
   CFLAGS += -mms-bitfields
   LDFLAGS += -s -shared -Wl,--enable-auto-import
+  SHARED_LDFLAGS += -shared
   LIBS += -L"$(PD_PATH)/src" -L"$(PD_PATH)/bin" -L"$(PD_PATH)/obj" -lpd -lwsock32 -lkernel32 -luser32 -lgdi32
   STRIP = strip --strip-unneeded -R .note -R .comment
   DISTBINDIR=$(DISTDIR)-$(OS)
