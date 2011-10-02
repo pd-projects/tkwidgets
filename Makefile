@@ -33,7 +33,7 @@ EXTRA_DIST =
 #------------------------------------------------------------------------------#
 
 # -I"$(PD_INCLUDE)/pd" supports the header location for 0.43
-CFLAGS = -I"$(PD_INCLUDE)" -Wall -W -g
+CFLAGS = -I"$(PD_INCLUDE)/pd" -Wall -W -g
 LDFLAGS =  
 SHARED_LDFLAGS =
 LIBS = 
@@ -49,7 +49,7 @@ LIBRARY_VERSION = $(shell sed -n 's|^\#X text [0-9][0-9]* [0-9][0-9]* VERSION \(
 
 CFLAGS += -DPD -DVERSION='"$(LIBRARY_VERSION)"'
 
-PD_INCLUDE = $(PD_PATH)
+PD_INCLUDE = $(PD_PATH)/include
 # where to install the library, overridden below depending on platform
 prefix = /usr/local
 libdir = $(prefix)/lib
@@ -151,7 +151,6 @@ ifeq ($(UNAME),Linux)
   CFLAGS += -fPIC
   LDFLAGS += -rdynamic  -shared -fPIC
   SHARED_LDFLAGS += -Wl,-soname,$(SHARED_LIB) -shared
-  SHARED_LDFLAGS += -rdynamic  -shared -fPIC
   LIBS += -lc
   STRIP = strip --strip-unneeded -R .note -R .comment
   DISTBINDIR=$(DISTDIR)-$(OS)-$(shell uname -m)
